@@ -1,12 +1,11 @@
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const store = require('./store');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'cookie1234';
-const DB_PATH = path.join(__dirname, 'data', 'registrations.json');
 
 const COURSES = {
   cookie_sa: { name: '쿠키사', image: '/images/cookie-sa.jpg' },
@@ -16,20 +15,6 @@ const COURSES = {
 
 const PRICE_BY_COUNT = { 1: 15000, 2: 28000, 3: 39000 };
 
-function loadDB() {
-  if (!fs.existsSync(DB_PATH)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
-  } catch {
-    return [];
-  }
-}
-
-function saveDB(records) {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  fs.writeFileSync(DB_PATH, JSON.stringify(records, null, 2), 'utf-8');
-}
-
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -37,7 +22,7 @@ app.get('/api/courses', (req, res) => {
   res.json({ courses: COURSES, priceByCount: PRICE_BY_COUNT });
 });
 
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
   const { studentId, name, courses } = req.body || {};
 
   if (typeof studentId !== 'string' || !studentId.trim()) {
@@ -67,22 +52,19 @@ app.post('/api/register', (req, res) => {
     confirmedAt: null,
   };
 
-  const records = loadDB();
-  records.push(record);
-  saveDB(records);
+  await store.insertRegistration(record);
 
   res.status(201).json({ registration: record });
 });
 
-app.get('/api/register/:id', (req, res) => {
-  const record = loadDB().find((r) => r.id === req.params.id);
+app.get('/api/register/:id', async (req, res) => {
+  const record = await store.findRegistration(req.params.id);
   if (!record) return res.status(404).json({ error: '수강신청 내역을 찾을 수 없습니다.' });
   res.json({ registration: record });
 });
 
-app.post('/api/register/:id/confirm-payment', (req, res) => {
-  const records = loadDB();
-  const record = records.find((r) => r.id === req.params.id);
+app.post('/api/register/:id/confirm-payment', async (req, res) => {
+  const record = await store.findRegistration(req.params.id);
   if (!record) return res.status(404).json({ error: '수강신청 내역을 찾을 수 없습니다.' });
   if (record.status === 'completed') {
     return res.json({ registration: record });
@@ -91,11 +73,12 @@ app.post('/api/register/:id/confirm-payment', (req, res) => {
   // Student self-report only. Actual completion requires admin confirmation
   // against the real bank account, so this can never finish a registration
   // on its own.
-  record.status = 'payment_claimed';
-  record.claimedAt = new Date().toISOString();
-  saveDB(records);
+  const updated = await store.updateRegistration(record.id, {
+    status: 'payment_claimed',
+    claimedAt: new Date().toISOString(),
+  });
 
-  res.json({ registration: record });
+  res.json({ registration: updated });
 });
 
 function requireAdmin(req, res, next) {
@@ -106,36 +89,39 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-app.get('/api/admin/registrations', requireAdmin, (req, res) => {
-  const records = loadDB().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+app.get('/api/admin/registrations', requireAdmin, async (req, res) => {
+  const records = (await store.listRegistrations()).sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
   res.json({ registrations: records });
 });
 
-app.post('/api/admin/registrations/:id/confirm', requireAdmin, (req, res) => {
-  const records = loadDB();
-  const record = records.find((r) => r.id === req.params.id);
+app.post('/api/admin/registrations/:id/confirm', requireAdmin, async (req, res) => {
+  const record = await store.findRegistration(req.params.id);
   if (!record) return res.status(404).json({ error: '수강신청 내역을 찾을 수 없습니다.' });
 
-  record.status = 'completed';
-  record.confirmedAt = new Date().toISOString();
-  saveDB(records);
+  const updated = await store.updateRegistration(record.id, {
+    status: 'completed',
+    confirmedAt: new Date().toISOString(),
+  });
 
-  res.json({ registration: record });
+  res.json({ registration: updated });
 });
 
-app.post('/api/admin/registrations/:id/reject', requireAdmin, (req, res) => {
-  const records = loadDB();
-  const record = records.find((r) => r.id === req.params.id);
+app.post('/api/admin/registrations/:id/reject', requireAdmin, async (req, res) => {
+  const record = await store.findRegistration(req.params.id);
   if (!record) return res.status(404).json({ error: '수강신청 내역을 찾을 수 없습니다.' });
 
-  record.status = 'pending_payment';
-  record.claimedAt = null;
-  record.confirmedAt = null;
-  saveDB(records);
+  const updated = await store.updateRegistration(record.id, {
+    status: 'pending_payment',
+    claimedAt: null,
+    confirmedAt: null,
+  });
 
-  res.json({ registration: record });
+  res.json({ registration: updated });
 });
 
 app.listen(PORT, () => {
   console.log(`쿠키사 수강신청 사이트가 http://localhost:${PORT} 에서 실행 중입니다.`);
+  console.log(`저장소: ${store.usingMongo ? 'MongoDB (영구 저장)' : '로컬 JSON 파일 (data/registrations.json)'}`);
 });

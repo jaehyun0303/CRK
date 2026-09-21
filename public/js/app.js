@@ -137,6 +137,8 @@
   const BANK_NAME = '토스뱅크';
   const BANK_ACCOUNT_NO = '190865621190'; // 1908-6562-1190, 하이픈 제거
 
+  const BANK_ACCOUNT_DISPLAY = '1908-6562-1190';
+
   function buildTossDeepLink(amount) {
     const params = new URLSearchParams({
       bank: BANK_NAME,
@@ -145,6 +147,22 @@
     });
     return `supertoss://send?${params.toString()}`;
   }
+
+  document.getElementById('btn-copy-account').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    try {
+      await navigator.clipboard.writeText(BANK_ACCOUNT_DISPLAY);
+    } catch {
+      // Clipboard API can fail on very old browsers or without HTTPS; fall back silently.
+    }
+    const original = btn.textContent;
+    btn.textContent = '복사됨';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.classList.remove('copied');
+    }, 1500);
+  });
 
   function renderPaymentView() {
     const reg = state.registration;

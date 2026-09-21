@@ -1,0 +1,105 @@
+:root {
+  --navy: #0f1f3d;
+  --gold: #c9a24b;
+  --cream: #f7f3ea;
+  --ink: #1c2333;
+  --muted: #6b7280;
+  --danger: #c0392b;
+  --ok: #1e7e45;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+}
+h1 { font-family: 'Noto Serif KR', serif; margin: 0; }
+
+.gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--navy);
+  padding: 20px;
+}
+.gate-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+}
+.gate-card p { color: var(--muted); font-size: 13px; margin: 8px 0 20px; }
+.gate-card input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+.btn {
+  width: 100%;
+  border: none;
+  background: var(--navy);
+  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+}
+.error-text { color: var(--danger); font-size: 12.5px; margin-top: 10px; }
+
+.dashboard { max-width: 1000px; margin: 0 auto; padding: 28px 20px 60px; }
+.dash-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.dash-stats { display: flex; gap: 10px; font-size: 13px; color: var(--muted); }
+.dash-stats span b { color: var(--navy); }
+
+.toast {
+  background: var(--gold);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+}
+.dash-table th, .dash-table td {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 13.5px;
+  border-bottom: 1px solid #f0ece0;
+}
+.dash-table th {
+  background: var(--navy);
+  color: #fff;
+  font-size: 12.5px;
+}
+.dash-table tr.new-row { animation: flash 1.6s ease; }
+@keyframes flash {
+  0% { background: #fff4d6; }
+  100% { background: transparent; }
+}
+.status-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.status-completed { background: #e4f5ea; color: var(--ok); }
+.status-pending { background: #fdeceb; color: var(--danger); }

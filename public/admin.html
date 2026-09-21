@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>쿠키사 수강신청 · 관리자</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+  <div id="gate" class="gate">
+    <div class="gate-card">
+      <h1>관리자 로그인</h1>
+      <p>비밀번호를 입력해 수강신청 현황을 확인하세요.</p>
+      <input type="password" id="admin-key" placeholder="관리자 비밀번호" />
+      <button id="gate-submit" class="btn">입장</button>
+      <p id="gate-error" class="error-text" hidden></p>
+    </div>
+  </div>
+
+  <div id="dashboard" class="dashboard" hidden>
+    <header class="dash-header">
+      <h1>수강신청 현황</h1>
+      <div class="dash-stats" id="dash-stats"></div>
+    </header>
+    <div id="toast" class="toast" hidden></div>
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>신청시각</th>
+          <th>학번</th>
+          <th>이름</th>
+          <th>선택과목</th>
+          <th>금액</th>
+          <th>상태</th>
+        </tr>
+      </thead>
+      <tbody id="dash-rows"></tbody>
+    </table>
+  </div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>

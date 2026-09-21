@@ -134,11 +134,24 @@
     }
   });
 
+  const BANK_NAME = '토스뱅크';
+  const BANK_ACCOUNT_NO = '190865621190'; // 1908-6562-1190, 하이픈 제거
+
+  function buildTossDeepLink(amount) {
+    const params = new URLSearchParams({
+      bank: BANK_NAME,
+      accountNo: BANK_ACCOUNT_NO,
+      amount: String(amount),
+    });
+    return `supertoss://send?${params.toString()}`;
+  }
+
   function renderPaymentView() {
     const reg = state.registration;
     const names = reg.courses.map((c) => state.courses[c].name).join(', ');
     document.getElementById('order-courses').innerHTML = `<span>선택 과목</span><span>${names}</span>`;
     document.getElementById('order-amount').textContent = formatWon(reg.amount);
+    document.getElementById('btn-open-toss').href = buildTossDeepLink(reg.amount);
   }
 
   // ---------- Payment ----------

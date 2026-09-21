@@ -106,6 +106,18 @@ async function findRegistration(id) {
   return loadFileDB().find((r) => r.id === id) || null;
 }
 
+async function findByStudentId(studentId) {
+  if (TURSO_URL) {
+    const client = await getClient();
+    const result = await client.execute({
+      sql: 'SELECT * FROM registrations WHERE studentId = ? LIMIT 1',
+      args: [studentId],
+    });
+    return result.rows[0] ? rowToRecord(result.rows[0]) : null;
+  }
+  return loadFileDB().find((r) => r.studentId === studentId) || null;
+}
+
 async function updateRegistration(id, updates) {
   if (TURSO_URL) {
     const client = await getClient();
@@ -131,5 +143,6 @@ module.exports = {
   listRegistrations,
   insertRegistration,
   findRegistration,
+  findByStudentId,
   updateRegistration,
 };

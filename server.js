@@ -39,6 +39,14 @@ app.post('/api/register', async (req, res) => {
     return res.status(400).json({ error: '올바르지 않은 과목이 포함되어 있습니다.' });
   }
 
+  const existing = await store.findByStudentId(studentId.trim());
+  if (existing) {
+    return res.status(409).json({
+      error: '이미 등록된 학번입니다. 로그인해서 신청 현황을 확인해주세요.',
+      registration: existing,
+    });
+  }
+
   const amount = PRICE_BY_COUNT[uniqueCourses.length];
   const record = {
     id: crypto.randomUUID(),
@@ -55,6 +63,26 @@ app.post('/api/register', async (req, res) => {
   await store.insertRegistration(record);
 
   res.status(201).json({ registration: record });
+});
+
+app.get('/api/registrations/lookup', async (req, res) => {
+  const studentId = String(req.query.studentId || '').trim();
+  const name = String(req.query.name || '').trim();
+
+  if (!studentId || !name) {
+    return res.status(400).json({ error: '학번과 이름을 입력해주세요.' });
+  }
+
+  const existing = await store.findByStudentId(studentId);
+  if (!existing) {
+    // 처음 신청하는 학생: 로그인이 아니라 신규 신청으로 진행합니다.
+    return res.json({ registration: null });
+  }
+  if (existing.name !== name) {
+    return res.status(409).json({ error: '이미 등록된 학번인데 이름이 일치하지 않습니다. 다시 확인해주세요.' });
+  }
+
+  res.json({ registration: existing });
 });
 
 app.get('/api/register/:id', async (req, res) => {

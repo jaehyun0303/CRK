@@ -77,11 +77,12 @@
   }
 
   // ---------- Login ----------
-  document.getElementById('login-form').addEventListener('submit', (e) => {
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const studentId = document.getElementById('input-student-id').value.trim();
     const name = document.getElementById('input-name').value.trim();
     const errorEl = document.getElementById('login-error');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
 
     if (!studentId || !name) {
       errorEl.textContent = '학번과 이름을 모두 입력해주세요.';
@@ -89,10 +90,42 @@
       return;
     }
     errorEl.hidden = true;
-    state.studentId = studentId;
-    state.name = name;
-    document.getElementById('topbar-user').textContent = `${studentId} · ${name}`;
-    showView('register');
+    submitBtn.disabled = true;
+
+    try {
+      const res = await fetch(
+        `/api/registrations/lookup?studentId=${encodeURIComponent(studentId)}&name=${encodeURIComponent(name)}`
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+
+      await coursesLoaded;
+
+      state.studentId = studentId;
+      state.name = name;
+      document.getElementById('topbar-user').textContent = `${studentId} · ${name}`;
+
+      if (data.registration) {
+        // 이미 신청한 학생: 본인 신청 현황으로 바로 이동
+        state.registration = data.registration;
+        if (data.registration.status === 'pending_payment') {
+          renderPaymentView();
+          showView('payment');
+        } else {
+          renderDoneView();
+          showView('done');
+          startStatusPolling();
+        }
+      } else {
+        // 처음 신청하는 학생: 안내 + 선택과목 화면으로 이동
+        showView('register');
+      }
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    } finally {
+      submitBtn.disabled = false;
+    }
   });
 
   // ---------- Register ----------
@@ -246,5 +279,5 @@
     }, 4000);
   }
 
-  loadCourses();
+  const coursesLoaded = loadCourses();
 })();

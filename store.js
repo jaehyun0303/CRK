@@ -2,19 +2,46 @@ const fs = require('fs');
 const path = require('path');
 
 const DB_PATH = path.join(__dirname, 'data', 'registrations.json');
-const MONGODB_URI = process.env.MONGODB_URI;
+const TURSO_URL = process.env.TURSO_DATABASE_URL;
+const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
 
-let collectionPromise = null;
+let clientPromise = null;
 
-function getCollection() {
-  if (!collectionPromise) {
-    const { MongoClient } = require('mongodb');
-    const client = new MongoClient(MONGODB_URI);
-    collectionPromise = client
-      .connect()
-      .then((c) => c.db(process.env.MONGODB_DB || 'crk').collection('registrations'));
+function getClient() {
+  if (!clientPromise) {
+    const { createClient } = require('@libsql/client');
+    const client = createClient({ url: TURSO_URL, authToken: TURSO_TOKEN });
+    clientPromise = client
+      .execute(
+        `CREATE TABLE IF NOT EXISTS registrations (
+          id TEXT PRIMARY KEY,
+          studentId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          courses TEXT NOT NULL,
+          amount INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          createdAt TEXT NOT NULL,
+          claimedAt TEXT,
+          confirmedAt TEXT
+        )`
+      )
+      .then(() => client);
   }
-  return collectionPromise;
+  return clientPromise;
+}
+
+function rowToRecord(row) {
+  return {
+    id: row.id,
+    studentId: row.studentId,
+    name: row.name,
+    courses: JSON.parse(row.courses),
+    amount: Number(row.amount),
+    status: row.status,
+    createdAt: row.createdAt,
+    claimedAt: row.claimedAt,
+    confirmedAt: row.confirmedAt,
+  };
 }
 
 function loadFileDB() {
@@ -31,25 +58,34 @@ function saveFileDB(records) {
   fs.writeFileSync(DB_PATH, JSON.stringify(records, null, 2), 'utf-8');
 }
 
-function stripMongoId(record) {
-  if (!record) return record;
-  const { _id, ...rest } = record;
-  return rest;
-}
-
 async function listRegistrations() {
-  if (MONGODB_URI) {
-    const col = await getCollection();
-    const records = await col.find({}).toArray();
-    return records.map(stripMongoId);
+  if (TURSO_URL) {
+    const client = await getClient();
+    const result = await client.execute('SELECT * FROM registrations');
+    return result.rows.map(rowToRecord);
   }
   return loadFileDB();
 }
 
 async function insertRegistration(record) {
-  if (MONGODB_URI) {
-    const col = await getCollection();
-    await col.insertOne({ ...record });
+  if (TURSO_URL) {
+    const client = await getClient();
+    await client.execute({
+      sql: `INSERT INTO registrations
+              (id, studentId, name, courses, amount, status, createdAt, claimedAt, confirmedAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        record.id,
+        record.studentId,
+        record.name,
+        JSON.stringify(record.courses),
+        record.amount,
+        record.status,
+        record.createdAt,
+        record.claimedAt,
+        record.confirmedAt,
+      ],
+    });
     return record;
   }
   const records = loadFileDB();
@@ -59,23 +95,28 @@ async function insertRegistration(record) {
 }
 
 async function findRegistration(id) {
-  if (MONGODB_URI) {
-    const col = await getCollection();
-    const record = await col.findOne({ id });
-    return stripMongoId(record);
+  if (TURSO_URL) {
+    const client = await getClient();
+    const result = await client.execute({
+      sql: 'SELECT * FROM registrations WHERE id = ?',
+      args: [id],
+    });
+    return result.rows[0] ? rowToRecord(result.rows[0]) : null;
   }
   return loadFileDB().find((r) => r.id === id) || null;
 }
 
 async function updateRegistration(id, updates) {
-  if (MONGODB_URI) {
-    const col = await getCollection();
-    const result = await col.findOneAndUpdate(
-      { id },
-      { $set: updates },
-      { returnDocument: 'after' }
-    );
-    return stripMongoId(result);
+  if (TURSO_URL) {
+    const client = await getClient();
+    const fields = Object.keys(updates);
+    const setClause = fields.map((f) => `${f} = ?`).join(', ');
+    const args = fields.map((f) => updates[f]);
+    await client.execute({
+      sql: `UPDATE registrations SET ${setClause} WHERE id = ?`,
+      args: [...args, id],
+    });
+    return findRegistration(id);
   }
   const records = loadFileDB();
   const record = records.find((r) => r.id === id);
@@ -86,7 +127,7 @@ async function updateRegistration(id, updates) {
 }
 
 module.exports = {
-  usingMongo: Boolean(MONGODB_URI),
+  usingTurso: Boolean(TURSO_URL),
   listRegistrations,
   insertRegistration,
   findRegistration,

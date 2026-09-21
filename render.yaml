@@ -8,5 +8,7 @@ services:
     envVars:
       - key: ADMIN_PASSWORD
         sync: false
-      - key: MONGODB_URI
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
         sync: false

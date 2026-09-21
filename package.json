@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/jaehyun0303/CRK#readme",
   "dependencies": {
-    "express": "^5.2.1",
-    "mongodb": "^7.6.0"
+    "@libsql/client": "^0.18.0",
+    "express": "^5.2.1"
   }
 }

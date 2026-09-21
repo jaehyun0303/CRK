@@ -123,5 +123,5 @@ app.post('/api/admin/registrations/:id/reject', requireAdmin, async (req, res) =
 
 app.listen(PORT, () => {
   console.log(`쿠키사 수강신청 사이트가 http://localhost:${PORT} 에서 실행 중입니다.`);
-  console.log(`저장소: ${store.usingMongo ? 'MongoDB (영구 저장)' : '로컬 JSON 파일 (data/registrations.json)'}`);
+  console.log(`저장소: ${store.usingTurso ? 'Turso (영구 저장)' : '로컬 JSON 파일 (data/registrations.json)'}`);
 });

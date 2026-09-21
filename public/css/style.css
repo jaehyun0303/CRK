@@ -336,6 +336,15 @@ input[type="text"]:focus { border-color: var(--blue); }
   justify-content: center;
   margin: 0 auto 18px;
 }
+.done-check-pending {
+  background: #e9edf5;
+  color: var(--blue);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 .done-sub { color: var(--navy); font-weight: 600; margin: 14px 0 6px; }
 .done-note { color: var(--muted); font-size: 13px; }
 

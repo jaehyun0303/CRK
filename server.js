@@ -63,7 +63,8 @@ app.post('/api/register', (req, res) => {
     amount,
     status: 'pending_payment',
     createdAt: new Date().toISOString(),
-    paidAt: null,
+    claimedAt: null,
+    confirmedAt: null,
   };
 
   const records = loadDB();
@@ -83,9 +84,15 @@ app.post('/api/register/:id/confirm-payment', (req, res) => {
   const records = loadDB();
   const record = records.find((r) => r.id === req.params.id);
   if (!record) return res.status(404).json({ error: '수강신청 내역을 찾을 수 없습니다.' });
+  if (record.status === 'completed') {
+    return res.json({ registration: record });
+  }
 
-  record.status = 'completed';
-  record.paidAt = new Date().toISOString();
+  // Student self-report only. Actual completion requires admin confirmation
+  // against the real bank account, so this can never finish a registration
+  // on its own.
+  record.status = 'payment_claimed';
+  record.claimedAt = new Date().toISOString();
   saveDB(records);
 
   res.json({ registration: record });
@@ -102,6 +109,31 @@ function requireAdmin(req, res, next) {
 app.get('/api/admin/registrations', requireAdmin, (req, res) => {
   const records = loadDB().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   res.json({ registrations: records });
+});
+
+app.post('/api/admin/registrations/:id/confirm', requireAdmin, (req, res) => {
+  const records = loadDB();
+  const record = records.find((r) => r.id === req.params.id);
+  if (!record) return res.status(404).json({ error: '수강신청 내역을 찾을 수 없습니다.' });
+
+  record.status = 'completed';
+  record.confirmedAt = new Date().toISOString();
+  saveDB(records);
+
+  res.json({ registration: record });
+});
+
+app.post('/api/admin/registrations/:id/reject', requireAdmin, (req, res) => {
+  const records = loadDB();
+  const record = records.find((r) => r.id === req.params.id);
+  if (!record) return res.status(404).json({ error: '수강신청 내역을 찾을 수 없습니다.' });
+
+  record.status = 'pending_payment';
+  record.claimedAt = null;
+  record.confirmedAt = null;
+  saveDB(records);
+
+  res.json({ registration: record });
 });
 
 app.listen(PORT, () => {

@@ -156,17 +156,64 @@
       if (!res.ok) throw new Error(data.error || '결제 확인에 실패했습니다.');
 
       state.registration = data.registration;
-      const names = state.registration.courses.map((c) => state.courses[c].name).join(', ');
-      document.getElementById('done-summary').textContent =
-        `${state.name}(${state.studentId})님, ${names} 수강신청이 접수되었습니다.`;
+      renderDoneView();
       showView('done');
+      startStatusPolling();
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.hidden = false;
-    } finally {
       btn.disabled = false;
     }
   });
+
+  function renderDoneView() {
+    const reg = state.registration;
+    const names = reg.courses.map((c) => state.courses[c].name).join(', ');
+    const summaryEl = document.getElementById('done-summary');
+    const iconEl = document.getElementById('done-icon');
+    const titleEl = document.getElementById('done-title');
+    const noteEl = document.getElementById('done-note');
+
+    if (reg.status === 'completed') {
+      iconEl.textContent = '✓';
+      iconEl.classList.remove('done-check-pending');
+      titleEl.textContent = '수강신청이 완료되었습니다';
+      summaryEl.textContent = `${state.name}(${state.studentId})님, ${names} 수강신청이 최종 승인되었습니다.`;
+      noteEl.textContent = '문제가 있을 경우 별도로 안내드립니다.';
+    } else {
+      iconEl.textContent = '…';
+      iconEl.classList.add('done-check-pending');
+      titleEl.textContent = '입금 확인 중입니다';
+      summaryEl.textContent = `${state.name}(${state.studentId})님, ${names} 신청 건의 입금 확인을 기다리고 있습니다.`;
+      noteEl.textContent = '관리자가 입금 내역을 확인하는 중입니다. 확인이 완료되면 이 화면이 자동으로 바뀝니다.';
+    }
+  }
+
+  let pollTimer = null;
+  function startStatusPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      if (!state.registration || state.registration.status === 'completed') {
+        clearInterval(pollTimer);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/register/${state.registration.id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const prevStatus = state.registration.status;
+        state.registration = data.registration;
+        if (state.registration.status !== prevStatus) {
+          renderDoneView();
+        }
+        if (state.registration.status === 'completed') {
+          clearInterval(pollTimer);
+        }
+      } catch {
+        // ignore transient network errors and keep polling
+      }
+    }, 4000);
+  }
 
   loadCourses();
 })();

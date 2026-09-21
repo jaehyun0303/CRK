@@ -102,4 +102,20 @@ h1 { font-family: 'Noto Serif KR', serif; margin: 0; }
   font-weight: 700;
 }
 .status-completed { background: #e4f5ea; color: var(--ok); }
-.status-pending { background: #fdeceb; color: var(--danger); }
+.status-pending { background: #f1f1ee; color: var(--muted); }
+.status-claimed { background: #fdf1de; color: #a9690f; }
+
+.dash-muted { color: var(--muted); font-size: 12px; }
+.action-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-right: 6px;
+  margin-bottom: 4px;
+}
+.action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.action-confirm { background: var(--ok); color: #fff; }
+.action-reject { background: #fdeceb; color: var(--danger); }
